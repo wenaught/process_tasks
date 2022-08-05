@@ -1,10 +1,16 @@
 import asyncio
 from asyncio.trsock import TransportSocket
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import partial
 from itertools import zip_longest
 import time
 from typing import cast
 import sys
+import uuid
+
+
+pool = ThreadPoolExecutor(1)
 
 
 @dataclass
@@ -38,15 +44,32 @@ def process(task: Task) -> None:
     task.status = 'done'
 
 
-async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+async def handle(loop: asyncio.BaseEventLoop, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     client_host, client_port = writer.get_extra_info('peername')
     print(f'Connected from {client_host}:{client_port}')
     while True:
         raw_data = await reader.readline()
         if not raw_data:
             break
-        query_type, data = raw_data.decode().strip().split(':', 1)
-        writer.write(f'Query type was {query_type.strip()} and data sent was {data.strip()}.\n'.encode())
+        query_type, data = [item.strip() for item in raw_data.decode().strip().split(':', 1)]
+        match query_type:
+            case 'status':
+                task = tasks.get(data, None)
+                match task:
+                    case None:
+                        response = 'No such task\n'
+                    case Task(_, task_data, status):
+                        response = f'Status of task {data}: {status}\n' if status != 'done' else \
+                            f'Task {data} done, result: {task_data}\n'
+            case '1' | '2' | '3':
+                task = Task(int(query_type), data, 'enqueued')
+                identifier = uuid.uuid4().hex[:8]
+                tasks[identifier] = task
+                loop.run_in_executor(pool, process, task)
+                response = f'Task {identifier} scheduled\n'
+            case _:
+                response = f'Impossible to handle: type {query_type.strip()}, data {data}\n'
+        writer.write(response.encode())
         await writer.drain()
     writer.close()
     await writer.wait_closed()
@@ -54,7 +77,8 @@ async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
 
 
 async def main(host: str = '127.0.0.1', port: str = '5000') -> None:
-    server = await asyncio.start_server(handle, host, int(port))
+    loop = asyncio.get_running_loop()
+    server = await asyncio.start_server(partial(handle, loop), host, int(port))
     socket_list = cast(tuple[TransportSocket, ...], server.sockets)
     addr = socket_list[0].getsockname()
     print(f'Serving on {addr}. Hit CTRL-C to stop.')
