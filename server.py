@@ -61,7 +61,7 @@ async def handle(loop: asyncio.BaseEventLoop, reader: asyncio.StreamReader, writ
             break
         query_type: str
         data: str
-        query_type, data = [item.strip() for item in raw_data.decode().strip().split(':', 1)]
+        query_type, data = [item.strip() for item in raw_data.decode('utf-8').strip().split(':', 1)]
         match query_type:
             case 'status':
                 task = tasks.get(data, None)
@@ -79,7 +79,7 @@ async def handle(loop: asyncio.BaseEventLoop, reader: asyncio.StreamReader, writ
                 response = f'{identifier}: task scheduled\n'
             case _:
                 response = f'Impossible to handle: type {query_type.strip()}, data {data}\n'
-        writer.write(response.encode())
+        writer.write(response.encode('utf-8'))
         await writer.drain()
     writer.close()
     await writer.wait_closed()

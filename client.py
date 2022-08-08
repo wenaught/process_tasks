@@ -39,8 +39,8 @@ def client(args: argparse.Namespace) -> None:
     :param args: an object containing parsed arguments.
     """
     conn = socket.create_connection((args.host, args.port))
-    reader = conn.makefile('r')
-    writer = conn.makefile('w')
+    reader = conn.makefile('r', encoding='utf-8')
+    writer = conn.makefile('w', encoding='utf-8')
     bound_send_and_receive = functools.partial(send_and_receive, writer, reader)
     packet = False
     match args:
