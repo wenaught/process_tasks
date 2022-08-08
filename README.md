@@ -1,6 +1,64 @@
 ## Client and server for task processing
 This repository contains TCP-based client and server code for task processing.
 
+### Requirements
+
+* Python 3.10 and newer - pattern matching is used in both client and server.
+
+### Usage
+Client:
+```
+$ python ./client.py --hlep
+usage: client.py [-h] [-H HOST] [-P PORT] {task,status} ...
+
+Send a task for processing or get its status.
+
+positional arguments:
+  {task,status}         task operations
+    task                send a new task to server
+    status              get task status
+
+options:
+  -h, --help            show this help message and exit
+  -H HOST, --host HOST  server address
+  -P PORT, --port PORT  server port
+
+$ python ./client.py task --help
+usage: client.py task [-h] [--packet] {1,2,3} task data
+
+positional arguments:
+  {1,2,3}     type of the task
+  task data   content of the message
+
+options:
+  -h, --help  show this help message and exit
+  --packet    run in packet mode
+
+$ python ./client.py status --help
+usage: client.py task [-h] [--packet] {1,2,3} task data
+
+positional arguments:
+  {1,2,3}     type of the task
+  task data   content of the message
+
+options:
+  -h, --help  show this help message and exit
+  --packet    run in packet mode
+```
+
+
+Server:
+```
+$ python .\server.py --help     
+usage: server.py [-h] [-H HOST] [-P PORT]
+
+Start a task processing server.
+
+options:
+  -h, --help            show this help message and exit
+  -H HOST, --host HOST  server address
+  -P PORT, --port PORT  server port
+```
 ### Details
 * **Task** is a unit of work, simulating a computation,
   that is run on the server. There are three types of **tasks**:
